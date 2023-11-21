@@ -2,7 +2,7 @@
 from typing import Optional, Tuple, Union
 from airflow.models import BaseOperator
 from airflow.utils.decorators import apply_defaults
-from yeedu.operators.yeedu import YeeduHook
+from yeedu.hooks.yeedu import YeeduHook
 from airflow.exceptions import AirflowException
 from airflow.models import Variable  # Import Variable from airflow.models
 
