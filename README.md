@@ -13,7 +13,7 @@ sudo pip install yeedu-operator-test
 ```
 from airflow import DAG
 from datetime import datetime, timedelta
-from providers.yeedu.operators.yeedu import YeeduJobRunOperator
+from yeedu.operators.yeedu import YeeduJobRunOperator
 
 # Define default_args dictionary to specify the default parameters for the DAG
 default_args = {
