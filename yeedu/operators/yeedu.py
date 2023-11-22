@@ -41,6 +41,7 @@ class YeeduJobRunOperator(BaseOperator):
         self.hook: YeeduHook = YeeduHook(token=self.token, hostname=self.hostname, workspace_id=self.workspace_id)
         self.job_id: Optional[Union[int, None]] = None
 
+
     def execute(self, context: dict) -> None:
         """
         Execute the YeeduOperator.
@@ -52,24 +53,31 @@ class YeeduJobRunOperator(BaseOperator):
         :param context: The execution context.
         :type context: dict
         """
-        job_id = self.hook.submit_job(self.job_conf_id)
+        try:
+            self.log.info("Job Started (Job Config Id: %s)",self.job_conf_id)
+            job_id = self.hook.submit_job(self.job_conf_id)
 
-        self.log.info("JOB ID: %s", job_id)
-        job_status: str = self.hook.wait_for_completion(job_id)
-        self.log.info("FINAL JOB STATUS: %s", job_status)
+            self.log.info("Job Submited (Job Id: %s)", job_id)
+            job_status: str = self.hook.wait_for_completion(job_id)
 
-        if job_status in ['DONE']:
-            log_type: str = 'stdout'
-        elif job_status in ['ERROR', 'TERMINATED']:
-            log_type: str = 'stderr'
-        else:
-            self.log.error("Job completion status is unknown.")
-            return
+            self.log.info("Final Job Status: %s", job_status)
 
-        job_log: str = self.hook.get_job_logs(job_id, log_type)
-        self.log.info("Logs for Job ID %s (Log Type: %s): %s", job_id, log_type, job_log)
+            if job_status in ['DONE']:
+                log_type: str = 'stdout'
+            elif job_status in ['ERROR', 'TERMINATED']:
+                log_type: str = 'stdout'
+            else:
+                self.log.error("Job completion status is unknown.")
+                return
 
-        if job_status in ['ERROR', 'TERMINATED']:
-            raise AirflowException(job_log)
+            job_log: str = self.hook.get_job_logs(job_id, log_type)
+            self.log.info("Logs for Job ID %s (Log Type: %s): %s", job_id, log_type, job_log)
+
+            if job_status in ['ERROR', 'TERMINATED']:
+                raise AirflowException(job_log)
+                       
+        except Exception as e:
+            raise AirflowException(e)
+            
                         
 
