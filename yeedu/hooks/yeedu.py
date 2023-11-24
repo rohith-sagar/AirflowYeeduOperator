@@ -6,7 +6,6 @@ import logging
 from typing import Tuple
 from airflow.hooks.base import BaseHook
 from airflow.exceptions import AirflowException
-import sys
 
 class YeeduHook(BaseHook):
     """
@@ -43,8 +42,12 @@ class YeeduHook(BaseHook):
         :return: The API response.
         :rtype: requests.Response
         """
-        response: requests.Response = requests.request(method, url, headers=self.headers, json=data)
-        return response
+        try:
+            response: requests.Response = requests.request(method, url, headers=self.headers, json=data)
+            return response
+                        
+        except Exception as e:
+            raise AirflowException(e)
             
 
 
@@ -85,8 +88,12 @@ class YeeduHook(BaseHook):
         :return: The API response.
         :rtype: requests.Response
         """
-        job_status_url: str = self.base_url + f'spark/job/{job_id}'
-        return self._api_request('GET', job_status_url)
+        try:
+            job_status_url: str = self.base_url + f'spark/job/{job_id}'
+            return self._api_request('GET', job_status_url)
+                        
+        except Exception as e:
+            raise AirflowException(e)
 
             
 
@@ -105,6 +112,7 @@ class YeeduHook(BaseHook):
             logs_url: str = self.base_url + f'spark/job/{job_id}/log/{log_type}'
             time.sleep(10)
             return self._api_request('GET', logs_url).text
+        
         except Exception as e:
             raise AirflowException(e)
             
@@ -146,5 +154,6 @@ class YeeduHook(BaseHook):
                     raise AirflowException("Continuous API failure reached the threshold")
 
             return job_status
+        
         except Exception as e:
             raise AirflowException(e)
