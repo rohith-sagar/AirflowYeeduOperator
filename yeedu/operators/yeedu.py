@@ -2,7 +2,7 @@
 from typing import Optional, Tuple, Union
 from airflow.models import BaseOperator
 from airflow.utils.decorators import apply_defaults
-from yeedu.hooks.yeedu import YeeduHook
+from providers.yeedu.hooks.yeedu import YeeduHook
 from airflow.exceptions import AirflowException
 from airflow.models import Variable  # Import Variable from airflow.models
 
@@ -41,7 +41,6 @@ class YeeduJobRunOperator(BaseOperator):
         self.hook: YeeduHook = YeeduHook(token=self.token, hostname=self.hostname, workspace_id=self.workspace_id)
         self.job_id: Optional[Union[int, None]] = None
 
-
     def execute(self, context: dict) -> None:
         """
         Execute the YeeduOperator.
@@ -64,7 +63,7 @@ class YeeduJobRunOperator(BaseOperator):
 
             if job_status in ['DONE']:
                 log_type: str = 'stdout'
-            elif job_status in ['ERROR', 'TERMINATED']:
+            elif job_status in ['ERROR', 'TERMINATED', 'KILLED']:
                 log_type: str = 'stdout'
             else:
                 self.log.error("Job completion status is unknown.")
@@ -73,11 +72,8 @@ class YeeduJobRunOperator(BaseOperator):
             job_log: str = self.hook.get_job_logs(job_id, log_type)
             self.log.info("Logs for Job ID %s (Log Type: %s): %s", job_id, log_type, job_log)
 
-            if job_status in ['ERROR', 'TERMINATED']:
+            if job_status in ['ERROR', 'TERMINATED', 'KILLED']:
                 raise AirflowException(job_log)
                        
         except Exception as e:
             raise AirflowException(e)
-            
-                        
-

@@ -6,7 +6,7 @@ import logging
 from typing import Tuple
 from airflow.hooks.base import BaseHook
 from airflow.exceptions import AirflowException
-
+import sys
 
 class YeeduHook(BaseHook):
     """
@@ -30,7 +30,6 @@ class YeeduHook(BaseHook):
         }
         self.base_url: str = f'http://{hostname}/api/v1/workspace/{workspace_id}/'
 
-
     def _api_request(self, method: str, url: str, data=None) -> requests.Response:
         """
         Make an API request.
@@ -44,11 +43,9 @@ class YeeduHook(BaseHook):
         :return: The API response.
         :rtype: requests.Response
         """
-        try:
-            response: requests.Response = requests.request(method, url, headers=self.headers, json=data)
-            return response
-        except Exception as e:
-            raise AirflowException(e)
+        response: requests.Response = requests.request(method, url, headers=self.headers, json=data)
+        return response
+            
 
 
     def submit_job(self, job_conf_id: str) -> int:
@@ -65,15 +62,19 @@ class YeeduHook(BaseHook):
             data: dict = {'job_conf_id': job_conf_id}
             response = self._api_request('POST', job_url, data)
             api_status_code = response.status_code
-            job_id = response.json().get('job_id')
-            if api_status_code == 200 and job_id:
-                return job_id
+            if api_status_code == 200:
+                job_id = response.json().get('job_id')
+                if job_id:
+                    return job_id
+                else:
+                    raise AirflowException(response)
             else:
                 raise AirflowException(response)
                 
         except Exception as e:
             raise AirflowException(e)
             
+
 
     def get_job_status(self, job_id: int) -> requests.Response:
         """
@@ -84,11 +85,9 @@ class YeeduHook(BaseHook):
         :return: The API response.
         :rtype: requests.Response
         """
-        try:
-            job_status_url: str = self.base_url + f'spark/job/{job_id}'
-            return self._api_request('GET', job_status_url)
-        except Exception as e:
-            raise AirflowException(e)
+        job_status_url: str = self.base_url + f'spark/job/{job_id}'
+        return self._api_request('GET', job_status_url)
+
             
 
     def get_job_logs(self, job_id: int, log_type: str) -> str:
@@ -125,21 +124,22 @@ class YeeduHook(BaseHook):
             attempts_failure: int = 0
 
             while True:
-                # Check job status and API status
-                job_status, api_status_code = self.check_job_status(job_id)
-                self.log.info("Current Job Status: %s , API Status Code: %s", job_status, api_status_code)
                 time.sleep(5)
-
-                if api_status_code == 200 and job_status in ['DONE', 'ERROR', 'TERMINATED']:
-                    break
-
-                # If API status is an error, increment the failure attempts counter
-                elif api_status_code != 200:
-                    attempts_failure += 1
-                    self.log.info("failure attempts : %s", attempts_failure)
-                else:
+                # Check job status
+                response: requests.Response = self.get_job_status(job_id)
+                api_status_code: int = response.status_code
+                self.log.info("Current API Status Code: %s",api_status_code)
+                if api_status_code == 200:
                     # If API status is a success, reset the failure attempts counter
                     attempts_failure = 0
+                    job_status: str = response.json().get('job_status')
+                    self.log.info("Current Job Status: %s ", job_status)
+                    if job_status in ['DONE', 'ERROR', 'TERMINATED', 'KILLED']:
+                        break
+                # If API status is an error, increment the failure attempts counter
+                else:
+                    attempts_failure += 1
+                    self.log.info("failure attempts : %s", attempts_failure)
 
                 # If continuous failures reach the threshold, throw an error
                 if attempts_failure == max_attempts:
@@ -148,26 +148,3 @@ class YeeduHook(BaseHook):
             return job_status
         except Exception as e:
             raise AirflowException(e)
-            
-
-    def check_job_status(self, job_id: int) -> Tuple[str, int]:
-        """
-        Check the status of a Yeedu job and its API status.
-
-        :param job_id: The job ID.
-        :type job_id: int
-        :return: A tuple containing the job status and API status code.
-        :rtype: tuple
-        :raises AirflowException: If there is an error checking the job status.
-        """
-        try:
-            response: requests.Response = self.get_job_status(job_id)
-            # Check job status
-            job_status: str = response.json().get('job_status')
-            # Check API status
-            api_status_code: int = response.status_code
-
-            return job_status, api_status_code
-        except requests.RequestException as e:
-            self.log.error("Status check failed: %s", str(e))
-            return 'ERROR', -1  # Or any values that indicate an error
