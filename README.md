@@ -8,39 +8,68 @@ To use the Yeedu Operator in your Airflow environment, install it using the foll
 sudo pip install yeedu-job-run-operator-test==2.0.0
 ```
 
-# Example DAG
+# DAG: Yeedu Job Execution
 
-```
-from airflow import DAG
+## Overview
+
+The `YeeduJobRunOperator` in this DAG facilitates the submission and monitoring of jobs using the Yeedu API in Apache Airflow. This DAG enables users to execute Yeedu jobs and handle their completion status and logs seamlessly within their Airflow environment.
+
+## Prerequisites
+
+Before using this DAG, ensure you have:
+
+- Access to the Yeedu API.
+- Proper configuration of Airflow with required connections and variables (if applicable).
+
+## Usage
+
+### DAG Initialization
+
+Import the necessary modules and instantiate the DAG with required arguments and schedule interval.
+
+```python
 from datetime import datetime, timedelta
-from yeedu.operators.yeedu import YeeduJobRunOperator
+from airflow import DAG
+from yeedu_operators import YeeduJobRunOperator
 
-# Define default_args dictionary to specify the default parameters for the DAG
+# Define DAG arguments
 default_args = {
     'owner': 'airflow',
+    'depends_on_past': False,
     'start_date': datetime(2023, 1, 1),
-    'retries': 0,
+    'retries': 1,
     'retry_delay': timedelta(minutes=5),
 }
 
-# Instantiate a DAG
+# Instantiate DAG
 dag = DAG(
-    'yeedu_spark_job_final',
+    'yeedu_job_execution',
     default_args=default_args,
-    description='DAG to submit Spark job to Yeedu',
-    schedule_interval='@once',  # You can modify the schedule_interval as needed
+    description='DAG to execute jobs using Yeedu API',
+    schedule_interval='@daily',
 )
+```
+### Task Initialization
 
-# YeeduOperator task to submit the Spark job
-yeedu_task = YeeduJobRunOperator(
-    task_id='submit_yeedu_spark_job_server_final',
-    job_conf_id=70,
-    token='',
-    hostname='',
-    workspace_id=3,
+Create tasks using `YeeduJobRunOperator` to perform various Yeedu API operations.
+# Define YeeduJobRunOperator tasks
+
+```python
+    submit_job_task = YeeduJobRunOperator(
+    task_id='submit_yeedu_job',
+    job_conf_id='your_job_config_id',  # Replace with your job config ID
+    token='your_yeedu_api_token',  # Replace with your Yeedu API token
+    hostname='yeedu.example.com',  # Replace with your Yeedu API hostname
+    workspace_id=123,  # Replace with your Yeedu workspace ID
     dag=dag,
 )
-
 ```
+### Execution
 
+To execute this DAG:
+
+1. Ensure all required configurations (job config ID, API token, hostname, workspace ID) are correctly provided in the task definitions.
+2. Place the DAG file in the appropriate Airflow DAGs folder.
+3. Trigger the DAG manually or based on the defined schedule interval.
+4. Monitor the Airflow UI for task execution and logs.
 

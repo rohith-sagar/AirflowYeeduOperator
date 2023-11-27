@@ -1,4 +1,22 @@
-"""This module contains Yeedu operators."""
+#
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
+"""This module contains Yeedu Operator."""
 from typing import Optional, Tuple, Union
 from airflow.models import BaseOperator
 from airflow.utils.decorators import apply_defaults
@@ -10,12 +28,14 @@ class YeeduJobRunOperator(BaseOperator):
     """
     YeeduJobRunOperator submits a job to Yeedu and waits for its completion.
 
-    :param job_conf_id: The job configuration ID.
+    :param job_conf_id: The job configuration ID (mandatory).
     :type job_conf_id: str
+    :param hostname: Yeedu API hostname (mandatory).
+    :type hostname: str
+    :param workspace_id: The ID of the Yeedu workspace to execute the job within (mandatory).
+    :type workspace_id: int
     :param token: Yeedu API token. If not provided, it will be retrieved from Airflow Variables.
-    :type token: str, optional
-    :param hostname: Yeedu API hostname. If not provided, it will be retrieved from Airflow Variables.
-    :type hostname: str, optional
+    :type token: str
 
     :param args: Additional positional arguments.
     :param kwargs: Additional keyword arguments.
@@ -27,15 +47,23 @@ class YeeduJobRunOperator(BaseOperator):
     def __init__(
         self,
         job_conf_id: str,
-        token: Optional[str] = None,
-        hostname: Optional[str] = None,
-        workspace_id: Optional[int] = None,
+        hostname: str,
+        workspace_id: int,
+        token: str,
         *args,
         **kwargs,
     ) -> None:
+        """
+        Initialize the YeeduJobRunOperator.
+
+        :param job_conf_id: The ID of the job configuration in Yeedu (mandatory).
+        :param token: Yeedu API token. If not provided, retrieved from Airflow Variables.
+        :param hostname: Yeedu API hostname (mandatory).
+        :param workspace_id: The ID of the Yeedu workspace to execute the job within (mandatory).
+        """
         super().__init__(*args, **kwargs)
         self.job_conf_id: str = job_conf_id
-        self.token: str = token or Variable.get("yeedu_token")  # You can use Airflow Variable to store sensitive information
+        self.token: str = token or  Variable.get("yeedu_token")
         self.hostname: str = hostname
         self.workspace_id: int = workspace_id
         self.hook: YeeduHook = YeeduHook(token=self.token, hostname=self.hostname, workspace_id=self.workspace_id)
@@ -43,17 +71,16 @@ class YeeduJobRunOperator(BaseOperator):
 
     def execute(self, context: dict) -> None:
         """
-        Execute the YeeduOperator.
+        Execute the YeeduJobRunOperator.
 
-        - Get the job ID.
-        - Wait for the job to complete.
-        - Retrieve and log job logs.
+        - Submits a job to Yeedu based on the provided configuration ID.
+        - Waits for the job to complete and retrieves job logs.
 
         :param context: The execution context.
         :type context: dict
         """
         try:
-            self.log.info("Job Started (Job Config Id: %s)",self.job_conf_id)
+            self.log.info("Job Config Id: %s",self.job_conf_id)
             job_id = self.hook.submit_job(self.job_conf_id)
 
             self.log.info("Job Submited (Job Id: %s)", job_id)
