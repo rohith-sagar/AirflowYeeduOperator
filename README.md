@@ -5,7 +5,7 @@
 To use the Yeedu Operator in your Airflow environment, install it using the following command:
 
 ```bash
-sudo pip install yeedu-job-run-operator-test==2.0.0
+sudo pip install airflow-yeedu-operator==1.0.0
 ```
 
 # DAG: Yeedu Job Execution
@@ -30,7 +30,7 @@ Import the necessary modules and instantiate the DAG with required arguments and
 ```python
 from datetime import datetime, timedelta
 from airflow import DAG
-from yeedu_operators import YeeduJobRunOperator
+from from yeedu.operators.yeedu import YeeduJobRunOperator
 
 # Define DAG arguments
 default_args = {

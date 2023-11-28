@@ -1,11 +1,12 @@
 from setuptools import setup, find_packages
 
 setup(
-    name='yeedu_job_run_operator_test',
-    version='2.0.0',
+    name='airflow-yeedu-operator',
+    version='1.0.0',
     packages=find_packages(),
     install_requires=[
-        'apache-airflow>=2.7.3',
+        'apache-airflow>=2.5.0',
+        'requests>=2.27',
         # Add any other dependencies here
     ],
     project_urls={
