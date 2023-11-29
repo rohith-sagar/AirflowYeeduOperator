@@ -93,14 +93,15 @@ class YeeduHook(BaseHook):
             data: dict = {'job_conf_id': job_conf_id}
             response = self._api_request('POST', job_url, data)
             api_status_code = response.status_code
+            response_json = response.json()
             if api_status_code == 200:
                 job_id = response.json().get('job_id')
                 if job_id:
                     return job_id
                 else:
-                    raise AirflowException(response)
+                    raise AirflowException(response_json)
             else:
-                raise AirflowException(response)
+                raise AirflowException(response_json)
                 
         except Exception as e:
             raise AirflowException(e)
